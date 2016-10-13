@@ -30,6 +30,7 @@ const (
 	ctxKeyBotClient = "bot-client"
 )
 
+// botClient returns a bot client inside context.
 func botClient(ctx context.Context) *linebot.Client {
 	return ctx.Value(ctxKeyBotClient).(*linebot.Client)
 }
@@ -65,7 +66,9 @@ func (bot *ExampleBot) newContext(req *http.Request) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	return context.WithValue(ctx, ctxKeyBotClient, client), nil
+	ctx = context.WithValue(ctx, ctxKeyBotClient, client)
+	// 他にもGoogle Maps等のclientがある場合はcontext.WithValue()でcontextにinstanceを持たせる
+	return ctx, nil
 }
 
 // handleEvents is handler function for handler.HandleEvents.
@@ -75,14 +78,34 @@ func (bot *ExampleBot) handleEvents(events []*linebot.Event, req *http.Request) 
 		aelog.Errorf(ctx, "%v", err)
 		return
 	}
-
+	// 大量のeventを処理するならeventsをジョブキューに入れるのがベター
 	for _, event := range events {
 		switch event.Type {
 		case linebot.EventTypeMessage:
 			switch message := event.Message.(type) {
 			case *linebot.TextMessage:
 				bot.handleMessageText(ctx, event, message)
+			case *linebot.ImageMessage:
+				// bot.handleMessageImage(ctx, event, message)
+			case *linebot.VideoMessage:
+				// bot.handleMessageVideo(ctx, event, message)
+			case *linebot.AudioMessage:
+				// bot.handleMessageAudio(ctx, event, message)
+			case *linebot.LocationMessage:
+				// bot.handleMessageLocation(ctx, event, message)
+			case *linebot.StickerMessage:
+				// bot.handleMessageSticker(ctx, event, message)
 			}
+		case linebot.EventTypeFollow:
+			// bot.handleFollow(ctx, event)
+		case linebot.EventTypeUnfollow:
+			// bot.handleUnfollow(ctx, event)
+		case linebot.EventTypeJoin:
+			// bot.handleJoin(ctx, event)
+		case linebot.EventTypeLeave:
+			// bot.handleLeave(ctx, event)
+		case linebot.EventTypePostback:
+			// bot.handlePostback(ctx, event)
 		case linebot.EventTypeBeacon:
 			bot.handleBeacon(ctx, event)
 		}
